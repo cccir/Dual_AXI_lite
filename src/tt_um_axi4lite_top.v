@@ -13,6 +13,7 @@ module tt_um_axi4lite_top (
     // MASTER 0 SIGNALS
     // =========================
     wire [3:0] m0_awaddr, m0_araddr;
+    wire [7:0] m0_wdata;
     wire m0_awvalid, m0_wvalid, m0_bready;
     wire m0_arvalid, m0_rready;
 
@@ -24,6 +25,7 @@ module tt_um_axi4lite_top (
     // MASTER 1 SIGNALS
     // =========================
     wire [3:0] m1_awaddr, m1_araddr;
+    wire [7:0] m1_wdata;
     wire m1_awvalid, m1_wvalid, m1_bready;
     wire m1_arvalid, m1_rready;
 
@@ -32,37 +34,33 @@ module tt_um_axi4lite_top (
     wire [7:0] m1_rdata;
 
     // =========================
-    // INTERCONNECT SIGNALS
-    // =========================
-    wire [3:0] awaddr_mux;
-    wire awvalid_mux, awready_mux;
-
-    wire [3:0] araddr_mux;
-    wire arvalid_mux, arready_mux;
-
-    wire select_master;
-    wire select_slave;
-
-    // =========================
     // MASTER INSTANCES
     // =========================
     axi4lite_master master0 (
         .clk(clk), .rst(rst),
         .start_write(ui_in[0]),
         .start_read(ui_in[1]),
-        .write_addr(ui_in[5:2]),
-        .read_addr(ui_in[5:2]),
+        .addr(ui_in[5:2]),
+        .wdata(uio_in),
+
+        .rdata(), .done(),
+
         .awaddr(m0_awaddr),
         .awvalid(m0_awvalid),
         .awready(m0_awready),
+
+        .wdata_o(m0_wdata),
         .wvalid(m0_wvalid),
         .wready(m0_wready),
+
         .bvalid(m0_bvalid),
         .bready(m0_bready),
+
         .araddr(m0_araddr),
         .arvalid(m0_arvalid),
         .arready(m0_arready),
-        .rdata(m0_rdata),
+
+        .rdata_i(m0_rdata),
         .rvalid(m0_rvalid),
         .rready(m0_rready)
     );
@@ -71,91 +69,135 @@ module tt_um_axi4lite_top (
         .clk(clk), .rst(rst),
         .start_write(uio_in[0]),
         .start_read(uio_in[1]),
-        .write_addr(uio_in[5:2]),
-        .read_addr(uio_in[5:2]),
+        .addr(uio_in[5:2]),
+        .wdata(ui_in),
+
+        .rdata(), .done(),
+
         .awaddr(m1_awaddr),
         .awvalid(m1_awvalid),
         .awready(m1_awready),
+
+        .wdata_o(m1_wdata),
         .wvalid(m1_wvalid),
         .wready(m1_wready),
+
         .bvalid(m1_bvalid),
         .bready(m1_bready),
+
         .araddr(m1_araddr),
         .arvalid(m1_arvalid),
         .arready(m1_arready),
-        .rdata(m1_rdata),
+
+        .rdata_i(m1_rdata),
         .rvalid(m1_rvalid),
         .rready(m1_rready)
     );
 
     // =========================
-    // ARBITER (FIXED PRIORITY)
+    // ARBITER (M0 PRIORITY)
     // =========================
-    assign select_master = (m0_awvalid | m0_arvalid) ? 0 : 1;
+    wire use_m0 = m0_awvalid | m0_arvalid;
 
     // =========================
     // MUX MASTER → BUS
     // =========================
-    assign awaddr_mux  = (select_master == 0) ? m0_awaddr  : m1_awaddr;
-    assign awvalid_mux = (select_master == 0) ? m0_awvalid : m1_awvalid;
+    wire [3:0] awaddr_mux  = use_m0 ? m0_awaddr  : m1_awaddr;
+    wire       awvalid_mux = use_m0 ? m0_awvalid : m1_awvalid;
 
-    assign araddr_mux  = (select_master == 0) ? m0_araddr  : m1_araddr;
-    assign arvalid_mux = (select_master == 0) ? m0_arvalid : m1_arvalid;
+    wire [7:0] wdata_mux   = use_m0 ? m0_wdata   : m1_wdata;
+    wire       wvalid_mux  = use_m0 ? m0_wvalid  : m1_wvalid;
+
+    wire       bready_mux  = use_m0 ? m0_bready  : m1_bready;
+
+    wire [3:0] araddr_mux  = use_m0 ? m0_araddr  : m1_araddr;
+    wire       arvalid_mux = use_m0 ? m0_arvalid : m1_arvalid;
+
+    wire       rready_mux  = use_m0 ? m0_rready  : m1_rready;
 
     // =========================
-    // SLAVE SELECT (ADDRESS DECODE)
+    // SLAVE SELECT
     // =========================
-    assign select_slave = awaddr_mux[3]; // MSB decides slave
+    wire sel = awaddr_mux[3];
 
     // =========================
     // SLAVE SIGNALS
     // =========================
     wire s0_awready, s1_awready;
+    wire s0_wready,  s1_wready;
+    wire s0_bvalid,  s1_bvalid;
+
     wire s0_arready, s1_arready;
+    wire s0_rvalid,  s1_rvalid;
     wire [7:0] s0_rdata, s1_rdata;
-    wire s0_rvalid, s1_rvalid;
 
     // =========================
-    // ROUTE TO SLAVES
+    // SLAVE INSTANCES
     // =========================
     axi4lite_slave slave0 (
         .clk(clk), .rst(rst),
         .awaddr(awaddr_mux),
-        .awvalid(awvalid_mux & ~select_slave),
+        .awvalid(awvalid_mux & ~sel),
         .awready(s0_awready),
+
+        .wdata(wdata_mux),
+        .wvalid(wvalid_mux & ~sel),
+        .wready(s0_wready),
+
+        .bvalid(s0_bvalid),
+        .bready(bready_mux & ~sel),
+
         .araddr(araddr_mux),
-        .arvalid(arvalid_mux & ~select_slave),
+        .arvalid(arvalid_mux & ~sel),
         .arready(s0_arready),
+
         .rdata(s0_rdata),
-        .rvalid(s0_rvalid)
+        .rvalid(s0_rvalid),
+        .rready(rready_mux & ~sel)
     );
 
     axi4lite_slave slave1 (
         .clk(clk), .rst(rst),
         .awaddr(awaddr_mux),
-        .awvalid(awvalid_mux & select_slave),
+        .awvalid(awvalid_mux & sel),
         .awready(s1_awready),
+
+        .wdata(wdata_mux),
+        .wvalid(wvalid_mux & sel),
+        .wready(s1_wready),
+
+        .bvalid(s1_bvalid),
+        .bready(bready_mux & sel),
+
         .araddr(araddr_mux),
-        .arvalid(arvalid_mux & select_slave),
+        .arvalid(arvalid_mux & sel),
         .arready(s1_arready),
+
         .rdata(s1_rdata),
-        .rvalid(s1_rvalid)
+        .rvalid(s1_rvalid),
+        .rready(rready_mux & sel)
     );
 
     // =========================
     // RETURN PATH
     // =========================
-    assign m0_awready = (select_master==0) ? (select_slave ? s1_awready : s0_awready) : 0;
-    assign m1_awready = (select_master==1) ? (select_slave ? s1_awready : s0_awready) : 0;
+    assign m0_awready = use_m0 ? (sel ? s1_awready : s0_awready) : 0;
+    assign m1_awready = ~use_m0 ? (sel ? s1_awready : s0_awready) : 0;
 
-    assign m0_arready = (select_master==0) ? (select_slave ? s1_arready : s0_arready) : 0;
-    assign m1_arready = (select_master==1) ? (select_slave ? s1_arready : s0_arready) : 0;
+    assign m0_wready  = use_m0 ? (sel ? s1_wready  : s0_wready)  : 0;
+    assign m1_wready  = ~use_m0 ? (sel ? s1_wready : s0_wready)  : 0;
 
-    assign m0_rdata = (select_slave ? s1_rdata : s0_rdata);
-    assign m1_rdata = (select_slave ? s1_rdata : s0_rdata);
+    assign m0_bvalid  = use_m0 ? (sel ? s1_bvalid  : s0_bvalid)  : 0;
+    assign m1_bvalid  = ~use_m0 ? (sel ? s1_bvalid : s0_bvalid)  : 0;
 
-    assign m0_rvalid = (select_master==0) ? (select_slave ? s1_rvalid : s0_rvalid) : 0;
-    assign m1_rvalid = (select_master==1) ? (select_slave ? s1_rvalid : s0_rvalid) : 0;
+    assign m0_arready = use_m0 ? (sel ? s1_arready : s0_arready) : 0;
+    assign m1_arready = ~use_m0 ? (sel ? s1_arready : s0_arready) : 0;
+
+    assign m0_rvalid  = use_m0 ? (sel ? s1_rvalid  : s0_rvalid)  : 0;
+    assign m1_rvalid  = ~use_m0 ? (sel ? s1_rvalid : s0_rvalid)  : 0;
+
+    assign m0_rdata   = sel ? s1_rdata : s0_rdata;
+    assign m1_rdata   = sel ? s1_rdata : s0_rdata;
 
     // =========================
     // OUTPUT
