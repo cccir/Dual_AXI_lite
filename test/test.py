@@ -35,6 +35,7 @@ async def axi_read(dut, master, addr):
     dut.uio_in.value = 0
     await RisingEdge(dut.clk)
 
+    # Start read
     if master == 0:
         dut.ui_in.value = (addr << 2) | 0x2
     else:
@@ -42,6 +43,7 @@ async def axi_read(dut, master, addr):
 
     await RisingEdge(dut.clk)
 
+    # Deassert
     dut.ui_in.value = 0
     dut.uio_in.value = 0
 
@@ -49,18 +51,17 @@ async def axi_read(dut, master, addr):
     for _ in range(25):
         await RisingEdge(dut.clk)
 
+    # Read data safely
     if master == 0:
-        
         val = dut.uo_out.value
-        
-        if not val.is_resolvable:
-            
-            dut._log.error(f"X/Z detected on uo_out: {val}")
-            return 0
-            
-            return val.to_unsigned()
     else:
-        return dut.uio_out.value.integer
+        val = dut.uio_out.value
+
+    if not val.is_resolvable:
+        dut._log.error(f"❌ X/Z detected: {val}")
+        return 0
+
+    return val.to_unsigned()
 
 @cocotb.test()
 async def axi4lite_test(dut):
