@@ -1,150 +1,166 @@
-`timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 12.09.2025 18:48:19
-// Design Name: 
-// Module Name: tt_um_axi4lite_top
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
+module tt_um_axi4lite_top (
+    input  wire clk,
+    input  wire rst,
 
-`timescale 1ns / 1ps
+    input  wire [7:0] ui_in,
+    output wire [7:0] uo_out,
 
-module tt_um_axi4lite_top
-(
-    input  wire                        clk,
-    input  wire                        rst_n ,
-    input  wire                        ena,
-
-    // Control interface to Master
-    input  wire [7:0]       ui_in,
-    //input  wire                        start_write,
-    //input  wire [ADDR_WIDTH-1:0]       write_addr,
-    input  wire [7:0]       uio_in,
-    //input  wire                        start_read,
-    //input  wire [ADDR_WIDTH-1:0]       read_addr,
-    output wire [7:0]       uio_oe,
-    output wire [7:0]       uio_out,
-    output wire [7:0]       uo_out
-
-    
+    input  wire [7:0] uio_in,
+    output wire [7:0] uio_out
 );
-     wire                        start_write;
-    wire [1:0]       write_addr;
-     wire                        start_read;
-     wire [1:0]       read_addr;
-     wire                        done;
-     assign start_write=ui_in[0];
-     assign write_addr=ui_in[2:1];
-     assign read_addr=ui_in[4:3];
-     assign start_read=ui_in[5];
-     reg [7:0] uo_out_reg;
 
-always @(posedge clk or negedge rst_n) begin
-    if (!rst_n)
-        uo_out_reg <= 8'b0;
-    else begin
-        uo_out_reg[0] <= done;
-        uo_out_reg[7:1] <= 7'b0;
-    end
-end
+    // =========================
+    // MASTER 0 SIGNALS
+    // =========================
+    wire [3:0] m0_awaddr, m0_araddr;
+    wire m0_awvalid, m0_wvalid, m0_bready;
+    wire m0_arvalid, m0_rready;
 
-assign uo_out = uo_out_reg;
+    wire m0_awready, m0_wready, m0_bvalid;
+    wire m0_arready, m0_rvalid;
+    wire [7:0] m0_rdata;
 
-     
-    // Expose AXI signals for simulation visibility
-     wire [1:0] awaddr;
-     wire                  awvalid;
-     wire                  awready;
-     wire [7:0] wdata;
-    wire [8/8-1:0] wstrb;
-     wire                  wvalid;
-     wire                  wready;
-     wire [1:0]            bresp;
-     wire                  bvalid;
-     wire                  bready;
-     wire [1:0] araddr;
-     wire                  arvalid;
-     wire                  arready;
-     wire [7:0] rdata;
-     wire [1:0]            rresp;
-     wire                  rvalid;
-     wire                  rready;
- 
-    // Master instance
-    axi4lite_master master_inst (
-        .m_axi_aclk    (clk),
-        .m_axi_aresetn (rst_n ),
+    // =========================
+    // MASTER 1 SIGNALS
+    // =========================
+    wire [3:0] m1_awaddr, m1_araddr;
+    wire m1_awvalid, m1_wvalid, m1_bready;
+    wire m1_arvalid, m1_rready;
 
-        .m_axi_awaddr  (awaddr),
-        .m_axi_awvalid (awvalid),
-        .m_axi_awready (awready),
+    wire m1_awready, m1_wready, m1_bvalid;
+    wire m1_arready, m1_rvalid;
+    wire [7:0] m1_rdata;
 
-        .m_axi_wdata   (wdata),
-        .m_axi_wstrb   (wstrb),
-        .m_axi_wvalid  (wvalid),
-        .m_axi_wready  (wready),
+    // =========================
+    // INTERCONNECT SIGNALS
+    // =========================
+    wire [3:0] awaddr_mux;
+    wire awvalid_mux, awready_mux;
 
-        .m_axi_bresp   (bresp),
-        .m_axi_bvalid  (bvalid),
-        .m_axi_bready  (bready),
+    wire [3:0] araddr_mux;
+    wire arvalid_mux, arready_mux;
 
-        .m_axi_araddr  (araddr),
-        .m_axi_arvalid (arvalid),
-        .m_axi_arready (arready),
+    wire select_master;
+    wire select_slave;
 
-        .m_axi_rdata   (rdata),
-        .m_axi_rresp   (rresp),
-        .m_axi_rvalid  (rvalid),
-        .m_axi_rready  (rready),
-
-        // User interface
-        .start_write   (start_write),
-        .write_addr    (write_addr),
-        .uio_in   (uio_in),
-        .start_read    (start_read),
-        .read_addr     (read_addr),
-        .read_data     (uio_out),
-        .done          (done)
+    // =========================
+    // MASTER INSTANCES
+    // =========================
+    axi4lite_master master0 (
+        .clk(clk), .rst(rst),
+        .start_write(ui_in[0]),
+        .start_read(ui_in[1]),
+        .write_addr(ui_in[5:2]),
+        .read_addr(ui_in[5:2]),
+        .awaddr(m0_awaddr),
+        .awvalid(m0_awvalid),
+        .awready(m0_awready),
+        .wvalid(m0_wvalid),
+        .wready(m0_wready),
+        .bvalid(m0_bvalid),
+        .bready(m0_bready),
+        .araddr(m0_araddr),
+        .arvalid(m0_arvalid),
+        .arready(m0_arready),
+        .rdata(m0_rdata),
+        .rvalid(m0_rvalid),
+        .rready(m0_rready)
     );
 
-    // Slave instance
-    axi4lite_slave slave_inst (
-        .s_axi_aclk    (clk),
-        .s_axi_aresetn (rst_n ),
-
-        .s_axi_awaddr  (awaddr),
-        .s_axi_awvalid (awvalid),
-        .s_axi_awready (awready),
-
-        .s_axi_wdata   (wdata),
-        .s_axi_wstrb   (wstrb),
-        .s_axi_wvalid  (wvalid),
-        .s_axi_wready  (wready),
-
-        .s_axi_bresp   (bresp),
-        .s_axi_bvalid  (bvalid),
-        .s_axi_bready  (bready),
-
-        .s_axi_araddr  (araddr),
-        .s_axi_arvalid (arvalid),
-        .s_axi_arready (arready),
-
-        .s_axi_rdata   (rdata),
-        .s_axi_rresp   (rresp),
-        .s_axi_rvalid  (rvalid),
-        .s_axi_rready  (rready)
+    axi4lite_master master1 (
+        .clk(clk), .rst(rst),
+        .start_write(uio_in[0]),
+        .start_read(uio_in[1]),
+        .write_addr(uio_in[5:2]),
+        .read_addr(uio_in[5:2]),
+        .awaddr(m1_awaddr),
+        .awvalid(m1_awvalid),
+        .awready(m1_awready),
+        .wvalid(m1_wvalid),
+        .wready(m1_wready),
+        .bvalid(m1_bvalid),
+        .bready(m1_bready),
+        .araddr(m1_araddr),
+        .arvalid(m1_arvalid),
+        .arready(m1_arready),
+        .rdata(m1_rdata),
+        .rvalid(m1_rvalid),
+        .rready(m1_rready)
     );
-assign uio_oe = 8'hFF;
+
+    // =========================
+    // ARBITER (FIXED PRIORITY)
+    // =========================
+    assign select_master = (m0_awvalid | m0_arvalid) ? 0 : 1;
+
+    // =========================
+    // MUX MASTER → BUS
+    // =========================
+    assign awaddr_mux  = (select_master == 0) ? m0_awaddr  : m1_awaddr;
+    assign awvalid_mux = (select_master == 0) ? m0_awvalid : m1_awvalid;
+
+    assign araddr_mux  = (select_master == 0) ? m0_araddr  : m1_araddr;
+    assign arvalid_mux = (select_master == 0) ? m0_arvalid : m1_arvalid;
+
+    // =========================
+    // SLAVE SELECT (ADDRESS DECODE)
+    // =========================
+    assign select_slave = awaddr_mux[3]; // MSB decides slave
+
+    // =========================
+    // SLAVE SIGNALS
+    // =========================
+    wire s0_awready, s1_awready;
+    wire s0_arready, s1_arready;
+    wire [7:0] s0_rdata, s1_rdata;
+    wire s0_rvalid, s1_rvalid;
+
+    // =========================
+    // ROUTE TO SLAVES
+    // =========================
+    axi4lite_slave slave0 (
+        .clk(clk), .rst(rst),
+        .awaddr(awaddr_mux),
+        .awvalid(awvalid_mux & ~select_slave),
+        .awready(s0_awready),
+        .araddr(araddr_mux),
+        .arvalid(arvalid_mux & ~select_slave),
+        .arready(s0_arready),
+        .rdata(s0_rdata),
+        .rvalid(s0_rvalid)
+    );
+
+    axi4lite_slave slave1 (
+        .clk(clk), .rst(rst),
+        .awaddr(awaddr_mux),
+        .awvalid(awvalid_mux & select_slave),
+        .awready(s1_awready),
+        .araddr(araddr_mux),
+        .arvalid(arvalid_mux & select_slave),
+        .arready(s1_arready),
+        .rdata(s1_rdata),
+        .rvalid(s1_rvalid)
+    );
+
+    // =========================
+    // RETURN PATH
+    // =========================
+    assign m0_awready = (select_master==0) ? (select_slave ? s1_awready : s0_awready) : 0;
+    assign m1_awready = (select_master==1) ? (select_slave ? s1_awready : s0_awready) : 0;
+
+    assign m0_arready = (select_master==0) ? (select_slave ? s1_arready : s0_arready) : 0;
+    assign m1_arready = (select_master==1) ? (select_slave ? s1_arready : s0_arready) : 0;
+
+    assign m0_rdata = (select_slave ? s1_rdata : s0_rdata);
+    assign m1_rdata = (select_slave ? s1_rdata : s0_rdata);
+
+    assign m0_rvalid = (select_master==0) ? (select_slave ? s1_rvalid : s0_rvalid) : 0;
+    assign m1_rvalid = (select_master==1) ? (select_slave ? s1_rvalid : s0_rvalid) : 0;
+
+    // =========================
+    // OUTPUT
+    // =========================
+    assign uo_out  = m0_rdata;
+    assign uio_out = m1_rdata;
+
 endmodule
