@@ -45,86 +45,70 @@ always @(posedge clk) begin
         arvalid <= 0;
         rready  <= 0;
     end else begin
-
-        // DEFAULTS (VERY IMPORTANT)
         done <= 0;
 
         case(state)
 
-        // =====================
-        IDLE
-        // =====================
         IDLE: begin
-            if(start_write)
+            if (start_write)
                 state <= WA;
-            else if(start_read)
+            else if (start_read)
                 state <= RA;
         end
 
-        // =====================
-        WRITE ADDRESS
-        // =====================
         WA: begin
             awaddr  <= addr;
             awvalid <= 1;
 
-            if(awvalid && awready) begin
+            if (awvalid && awready) begin
                 awvalid <= 0;
                 state   <= WD;
             end
         end
 
-        // =====================
-        WRITE DATA
-        // =====================
         WD: begin
             wdata_o <= wdata;
             wvalid  <= 1;
 
-            if(wvalid && wready) begin
+            if (wvalid && wready) begin
                 wvalid <= 0;
                 state  <= WR;
             end
         end
 
-        // =====================
-        WRITE RESPONSE
-        // =====================
         WR: begin
             bready <= 1;
 
-            if(bvalid && bready) begin
+            if (bvalid && bready) begin
                 bready <= 0;
                 done   <= 1;
                 state  <= IDLE;
             end
         end
 
-        // =====================
-        READ ADDRESS
-        // =====================
         RA: begin
             araddr  <= addr;
             arvalid <= 1;
 
-            if(arvalid && arready) begin
+            if (arvalid && arready) begin
                 arvalid <= 0;
                 state   <= RD;
             end
         end
 
-        // =====================
-        READ DATA
-        // =====================
         RD: begin
             rready <= 1;
 
-            if(rvalid && rready) begin
+            if (rvalid && rready) begin
                 rdata  <= rdata_i;
                 rready <= 0;
                 done   <= 1;
                 state  <= IDLE;
             end
+        end
+
+        default: begin
+            state <= IDLE;
         end
 
         endcase
