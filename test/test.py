@@ -45,18 +45,14 @@ async def axi_read(dut, master, addr):
     dut.ui_in.value = 0
     dut.uio_in.value = 0
 
-    # Wait for data to stabilize
-    for _ in range(20):
+    # Wait for AXI pipeline
+    for _ in range(25):
         await RisingEdge(dut.clk)
 
     if master == 0:
-        return int(dut.uo_out.value)
+        return dut.uo_out.value.integer
     else:
-        return int(dut.uio_out.value)
-
-    await RisingEdge(dut.clk)
-    return int(dut.uio_out.value) & 0xFF
-
+        return dut.uio_out.value.integer
 
 @cocotb.test()
 async def axi4lite_test(dut):
@@ -83,8 +79,8 @@ async def axi4lite_test(dut):
         (1, 0x3, 0xCC),  # M1 → S0
         (1, 0xA, 0xDD),  # M1 → S1
     ]
-
-    for master, addr, data in tests:
+    
+for master, addr, data in tests:
 
     dut._log.info(f"\n--- Master{master} WRITE Addr=0x{addr:X} Data=0x{data:X}")
 
