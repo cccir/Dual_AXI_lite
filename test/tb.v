@@ -12,14 +12,17 @@ module axi4lite_tb;
     wire [7:0] uo_out;
 
     // DUT
-    tt_um_axi4lite_top dut (
-        .clk    (clk),
-        .rst    (rst),
-        .ui_in  (ui_in),
-        .uio_in (uio_in),
-        .uio_out(uio_out),
-        .uo_out (uo_out)
-    );
+tt_um_axi4lite_top dut (
+    .clk    (clk),
+    .rst_n  (~rst),   // active LOW reset
+    .ena    (1'b1),
+
+    .ui_in  (ui_in),
+    .uio_in (uio_in),
+    .uio_out(uio_out),
+    .uo_out (uo_out),
+    .uio_oe ()
+);
 
     // Clock
     initial begin
