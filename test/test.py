@@ -90,6 +90,8 @@ async def axi4lite_test(dut):
     
     for master, addr, data in tests:
         
+        dut._log.info(f"uo_out raw = {dut.uo_out.value}")
+        
         dut._log.info(f"\n--- Master{master} WRITE Addr=0x{addr:X} Data=0x{data:X}")
         
         await axi_write(dut, master, addr, data)
