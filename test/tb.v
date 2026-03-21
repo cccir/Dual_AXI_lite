@@ -42,7 +42,8 @@ tt_um_axi4lite_top dut (
 
         #10 ui_in[0] = 0;
 
-        wait(dut.m0.done);   // ✅ wait for completion
+        wait(dut.m0.done);
+   // ✅ wait for completion
         #10;
 
         $display("M0 WRITE: Addr=0x%h Data=0x%h", addr, data);
@@ -61,7 +62,8 @@ tt_um_axi4lite_top dut (
 
         #10 ui_in[1] = 0;
 
-        wait(dut.m0.done);   // ✅ wait for read complete
+        wait(dut.m0_bvalid);   // write complete
+        wait(dut.m0_rvalid);   // read complete   // ✅ wait for read complete
         #10;
 
         $display("M0 READ: Addr=0x%h Data=0x%h", addr, uo_out);
@@ -80,7 +82,8 @@ tt_um_axi4lite_top dut (
 
         #10 uio_in[0] = 0;
 
-        wait(dut.m1.done);   // ✅ wait for completion
+        wait(dut.m1_bvalid);   // write complete
+        wait(dut.m1_rvalid);   // read complete   // ✅ wait for completion
         #10;
 
         $display("M1 WRITE: Addr=0x%h Data=0x%h", addr, data);
@@ -99,7 +102,8 @@ tt_um_axi4lite_top dut (
 
         #10 uio_in[1] = 0;
 
-        wait(dut.m1.done);   // ✅ wait for read complete
+        wait(dut.m1_bvalid);   // write complete
+        wait(dut.m1_rvalid);   // read complete   // ✅ wait for read complete
         #10;
 
         $display("M1 READ: Addr=0x%h Data=0x%h", addr, uio_out);
