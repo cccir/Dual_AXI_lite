@@ -1,13 +1,29 @@
 module tt_um_axi4lite_top (
-    input clk,
-    input rst,
+    input  wire       clk,
+    input  wire       rst_n,   // active LOW reset
+    input  wire       ena,     // enable
 
-    input  [7:0] ui_in,
-    output [7:0] uo_out,
+    input  wire [7:0] ui_in,
+    output wire [7:0] uo_out,
 
-    input  [7:0] uio_in,
-    output [7:0] uio_out
+    input  wire [7:0] uio_in,
+    output wire [7:0] uio_out,
+    output wire [7:0] uio_oe
 );
+
+    // Convert reset
+    wire rst = ~rst_n;
+
+    // You can ignore ena for now or gate logic
+    // Example: simple enable guard (optional)
+    wire clk_en = ena ? clk : 1'b0;
+
+    // Use clk directly (safe)
+    // assign clk_internal = clk;
+
+    assign uio_oe = 8'hFF;
+
+    // ---------------- EXISTING DESIGN ----------------
 
     // ================= MASTER WIRES =================
     wire [3:0] m0_awaddr, m1_awaddr;
@@ -198,4 +214,6 @@ assign m1_rdata = (read_master==1) ? (sel_r_reg ? s1_rdata : s0_rdata) : 0;
     assign uo_out  = m0_rdata;
     assign uio_out = m1_rdata;
 
-endmodule
+    assign uio_oe = 8'hFF;  // all outputs (or 0x00 if inputs)
+
+endmodule 
