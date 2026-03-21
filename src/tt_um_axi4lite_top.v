@@ -28,6 +28,9 @@ module tt_um_axi4lite_top (
 
     wire [7:0] m0_rdata, m1_rdata;
 
+    wire m0_active = m0_awvalid | m0_wvalid | m0_arvalid;
+    wire m1_active = m1_awvalid | m1_wvalid | m1_arvalid;
+
     // ================= MASTER INST =================
     axi4lite_master m0 (
         .clk(clk), .rst(rst),
@@ -69,14 +72,14 @@ module tt_um_axi4lite_top (
             busy <= 0;
         end else begin
             if (!busy) begin
-                if (m0_awvalid || m0_arvalid) begin
+                if (m0_active) begin
                     active_master <= 0;
                     busy <= 1;
-                end else if (m1_awvalid || m1_arvalid) begin
+                end else if (m1_active) begin
                     active_master <= 1;
                     busy <= 1;
                 end
-            end
+                end
 
             if (busy) begin
                 if ((active_master==0 && (m0_rvalid||m0_bvalid)) ||
