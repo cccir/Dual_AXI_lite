@@ -31,6 +31,9 @@ module tt_um_axi4lite_top (
     wire m0_active = m0_awvalid | m0_wvalid | m0_arvalid;
     wire m1_active = m1_awvalid | m1_wvalid | m1_arvalid;
 
+    reg sel_r_reg;
+    reg read_master;  // 0 = M0, 1 = M1
+
     // ================= MASTER INST =================
     axi4lite_master m0 (
         .clk(clk), .rst(rst),
@@ -82,9 +85,9 @@ module tt_um_axi4lite_top (
                 end
 
             if (busy) begin
-                if ((active_master==0 && (m0_rvalid||m0_bvalid)) ||
-                    (active_master==1 && (m1_rvalid||m1_bvalid)))
-                    busy <= 0;
+                if ((active_master==0 && ((m0_rvalid && m0_rready) || (m0_bvalid && m0_bready))) ||
+    (active_master==1 && ((m1_rvalid && m1_rready) || (m1_bvalid && m1_bready))))
+    busy <= 0;
             end
         end
     end
@@ -160,6 +163,19 @@ module tt_um_axi4lite_top (
     .rready(rready & sel_r)
 );
 
+    always @(posedge clk) begin
+    if (rst)
+        read_master <= 0;
+    else if (arvalid && (use_m0 ? m0_arready : m1_arready))
+        read_master <= active_master;
+end
+
+    always @(posedge clk) begin
+    if (rst)
+        sel_r_reg <= 0;
+    else if (arvalid && (use_m0 ? m0_arready : m1_arready))
+        sel_r_reg <= sel_r;
+end
     // ================= RETURN =================
     assign m0_awready = use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
     assign m1_awready = !use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
@@ -173,11 +189,11 @@ module tt_um_axi4lite_top (
     assign m0_arready = use_m0 ? (sel_r ? s1_arready : s0_arready) : 0;
     assign m1_arready = !use_m0 ? (sel_r ? s1_arready : s0_arready) : 0;
 
-    assign m0_rvalid = use_m0 ? (sel_r ? s1_rvalid : s0_rvalid) : 0;
-    assign m1_rvalid = !use_m0 ? (sel_r ? s1_rvalid : s0_rvalid) : 0;
-
-    assign m0_rdata = sel_r ? s1_rdata : s0_rdata;
-    assign m1_rdata = sel_r ? s1_rdata : s0_rdata;
+assign m0_rvalid = (read_master==0) ? (sel_r_reg ? s1_rvalid : s0_rvalid) : 0;
+assign m1_rvalid = (read_master==1) ? (sel_r_reg ? s1_rvalid : s0_rvalid) : 0;
+    
+assign m0_rdata = (read_master==0) ? (sel_r_reg ? s1_rdata : s0_rdata) : 0;
+assign m1_rdata = (read_master==1) ? (sel_r_reg ? s1_rdata : s0_rdata) : 0;
 
     assign uo_out  = m0_rdata;
     assign uio_out = m1_rdata;
