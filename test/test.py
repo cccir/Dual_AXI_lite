@@ -80,21 +80,21 @@ async def axi4lite_test(dut):
         (1, 0xA, 0xDD),  # M1 → S1
     ]
     
-for master, addr, data in tests:
-
-    dut._log.info(f"\n--- Master{master} WRITE Addr=0x{addr:X} Data=0x{data:X}")
-
-    await axi_write(dut, master, addr, data)
-
-    await Timer(20, units="ns")
-
-    dut._log.info(f"--- Master{master} READ Addr=0x{addr:X}")
-
-    rdata = await axi_read(dut, master, addr)
-
-    dut._log.info(f"READ DATA = 0x{rdata:X}")
-
-    if rdata != data:
-        dut._log.error(f"❌ FAIL: Expected 0x{data:X}, Got 0x{rdata:X}")
-    else:
-        dut._log.info("✅ PASS")
+    for master, addr, data in tests:
+        
+        dut._log.info(f"\n--- Master{master} WRITE Addr=0x{addr:X} Data=0x{data:X}")
+        
+        await axi_write(dut, master, addr, data)
+        
+        await Timer(20, units="ns")
+        
+        dut._log.info(f"--- Master{master} READ Addr=0x{addr:X}")
+        
+        rdata = await axi_read(dut, master, addr)
+        
+        dut._log.info(f"READ DATA = 0x{rdata:X}")
+        
+        if rdata != data:
+            dut._log.error(f"❌ FAIL: Expected 0x{data:X}, Got 0x{rdata:X}")
+        else:
+            dut._log.info("✅ PASS")
