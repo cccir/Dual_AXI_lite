@@ -1,49 +1,132 @@
-`default_nettype none
 `timescale 1ns / 1ps
 
-/* This testbench just instantiates the module and makes some convenient wires
-   that can be driven / tested by the cocotb test.py.
-*/
-module tb ();
+module axi4lite_tb;
 
-  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
-  initial begin
-    $dumpfile("tb.fst");
-    $dumpvars(0, tb);
-    #1;
-  end
+    reg clk;
+    reg rst_n;
+    reg ena;
 
-  // Wire up the inputs and outputs:
-  reg clk;
-  reg rst_n;
-  reg ena;
-  reg [7:0] ui_in;
-  reg [7:0] uio_in;
-  wire [7:0] uo_out;
-  wire [7:0] uio_out;
-  wire [7:0] uio_oe;
-`ifdef GL_TEST
-  wire VPWR = 1'b1;
-  wire VGND = 1'b0;
-`endif
+    reg  [7:0] ui_in;
+    reg  [7:0] uio_in;
 
-  // Replace tt_um_example with your module name:
-  tt_um_example user_project (
+    wire [7:0] uio_oe;
+    wire [7:0] uio_out;
+    wire [7:0] uo_out;
 
-      // Include power ports for the Gate Level test:
-`ifdef GL_TEST
-      .VPWR(VPWR),
-      .VGND(VGND),
-`endif
+    // DUT
+    tt_um_axi4lite_top dut (
+        .clk    (clk),
+        .rst_n  (rst_n),
+        .ena    (ena),
+        .ui_in  (ui_in),
+        .uio_in (uio_in),
+        .uio_oe (uio_oe),
+        .uio_out(uio_out),
+        .uo_out (uo_out)
+    );
 
-      .ui_in  (ui_in),    // Dedicated inputs
-      .uo_out (uo_out),   // Dedicated outputs
-      .uio_in (uio_in),   // IOs: Input path
-      .uio_out(uio_out),  // IOs: Output path
-      .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
-      .ena    (ena),      // enable - goes high when design is selected
-      .clk    (clk),      // clock
-      .rst_n  (rst_n)     // not reset
-  );
+    // Clock
+    initial begin
+        clk = 0;
+        forever #5 clk = ~clk;
+    end
+
+    // ---------------- TASK: MASTER0 WRITE ----------------
+    task m0_write(input [3:0] addr, input [7:0] data);
+    begin
+        ui_in  = 0;
+        uio_in = 0;
+        #10;
+
+        ui_in[5:2] = addr;
+        ui_in[0]   = 1;     // start_write
+        uio_in     = data;
+
+        #10 ui_in[0] = 0;
+
+        #50; // wait for transaction
+        $display("M0 WRITE: Addr=0x%h Data=0x%h", addr, data);
+    end
+    endtask
+
+    // ---------------- TASK: MASTER0 READ ----------------
+    task m0_read(input [3:0] addr);
+    begin
+        ui_in = 0;
+        #10;
+
+        ui_in[5:2] = addr;
+        ui_in[1]   = 1;     // start_read
+
+        #10 ui_in[1] = 0;
+
+        #50;
+        $display("M0 READ: Addr=0x%h Data=0x%h", addr, uo_out);
+    end
+    endtask
+
+    // ---------------- TASK: MASTER1 WRITE ----------------
+    task m1_write(input [3:0] addr, input [7:0] data);
+    begin
+        ui_in  = 0;
+        uio_in = 0;
+        #10;
+
+        uio_in[5:2] = addr;
+        uio_in[0]   = 1;
+        ui_in       = data;
+
+        #10 uio_in[0] = 0;
+
+        #50;
+        $display("M1 WRITE: Addr=0x%h Data=0x%h", addr, data);
+    end
+    endtask
+
+    // ---------------- TASK: MASTER1 READ ----------------
+    task m1_read(input [3:0] addr);
+    begin
+        uio_in = 0;
+        #10;
+
+        uio_in[5:2] = addr;
+        uio_in[1]   = 1;
+
+        #10 uio_in[1] = 0;
+
+        #50;
+        $display("M1 READ: Addr=0x%h Data=0x%h", addr, uio_out);
+    end
+    endtask
+
+    // ---------------- TEST ----------------
+    initial begin
+        rst_n  = 0;
+        ena    = 1;
+        ui_in  = 0;
+        uio_in = 0;
+
+        #20 rst_n = 1;
+        #20;
+
+        $display("===== MASTER0 → SLAVE0 =====");
+        m0_write(4'h2, 8'hAA);   // Slave0
+        m0_read (4'h2);
+
+        $display("===== MASTER0 → SLAVE1 =====");
+        m0_write(4'hA, 8'hBB);   // Slave1
+        m0_read (4'hA);
+
+        $display("===== MASTER1 → SLAVE0 =====");
+        m1_write(4'h3, 8'hCC);
+        m1_read (4'h3);
+
+        $display("===== MASTER1 → SLAVE1 =====");
+        m1_write(4'hB, 8'hDD);
+        m1_read (4'hB);
+
+        #100;
+        $finish;
+    end
 
 endmodule
