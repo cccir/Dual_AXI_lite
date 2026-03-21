@@ -36,79 +36,54 @@ reg [2:0] state;
 
 always @(posedge clk) begin
     if (rst) begin
-        state   <= IDLE;
-        done    <= 0;
-
-        awvalid <= 0;
-        wvalid  <= 0;
-        bready  <= 0;
-        arvalid <= 0;
-        rready  <= 0;
+        state<=IDLE;
+        awvalid<=0; wvalid<=0; bready<=0;
+        arvalid<=0; rready<=0;
+        done<=0;
     end else begin
-        done <= 0;
+        done<=0;
 
         case(state)
 
         IDLE: begin
-            if (start_write)
-                state <= WA;
-            else if (start_read)
-                state <= RA;
+            if(start_write) state<=WA;
+            else if(start_read) state<=RA;
         end
 
         WA: begin
-            awaddr  <= addr;
-            awvalid <= 1;
-
-            if (awvalid && awready) begin
-                awvalid <= 0;
-                state   <= WD;
+            awaddr<=addr; awvalid<=1;
+            if(awvalid && awready) begin
+                awvalid<=0; state<=WD;
             end
         end
 
         WD: begin
-            wdata_o <= wdata;
-            wvalid  <= 1;
-
-            if (wvalid && wready) begin
-                wvalid <= 0;
-                state  <= WR;
+            wdata_o<=wdata; wvalid<=1;
+            if(wvalid && wready) begin
+                wvalid<=0; state<=WR;
             end
         end
 
         WR: begin
-            bready <= 1;
-
-            if (bvalid && bready) begin
-                bready <= 0;
-                done   <= 1;
-                state  <= IDLE;
+            bready<=1;
+            if(bvalid) begin
+                bready<=0; done<=1; state<=IDLE;
             end
         end
 
         RA: begin
-            araddr  <= addr;
-            arvalid <= 1;
-
-            if (arvalid && arready) begin
-                arvalid <= 0;
-                state   <= RD;
+            araddr<=addr; arvalid<=1;
+            if(arvalid && arready) begin
+                arvalid<=0; state<=RD;
             end
         end
 
         RD: begin
-            rready <= 1;
-
-            if (rvalid && rready) begin
-                rdata  <= rdata_i;
-                rready <= 0;
-                done   <= 1;
-                state  <= IDLE;
+            rready<=1;
+            if(rvalid) begin
+                rdata<=rdata_i;
+                rready<=0; done<=1; state<=IDLE;
             end
-        end
-
-        default: begin
-            state <= IDLE;
         end
 
         endcase
