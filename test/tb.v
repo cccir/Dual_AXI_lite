@@ -11,7 +11,7 @@ module axi4lite_tb;
     wire [7:0] uio_out;
     wire [7:0] uo_out;
 
-    // DUT (FIXED PORT MAP)
+    // DUT
     tt_um_axi4lite_top dut (
         .clk    (clk),
         .rst    (rst),
@@ -27,43 +27,48 @@ module axi4lite_tb;
         forever #5 clk = ~clk;
     end
 
-    // ---------------- TASK: MASTER0 WRITE ----------------
+    // ---------------- MASTER0 WRITE ----------------
     task m0_write(input [3:0] addr, input [7:0] data);
     begin
         ui_in  = 0;
-        uio_in = data;   // data goes here
+        uio_in = data;
         #10;
 
         ui_in[5:2] = addr;
-        ui_in[0]   = 1;     // start_write
+        ui_in[0]   = 1;   // start_write
 
         #10 ui_in[0] = 0;
 
-        #80;
+        wait(dut.m0.done);   // ✅ wait for completion
+        #10;
+
         $display("M0 WRITE: Addr=0x%h Data=0x%h", addr, data);
     end
     endtask
 
-    // ---------------- TASK: MASTER0 READ ----------------
+    // ---------------- MASTER0 READ ----------------
     task m0_read(input [3:0] addr);
     begin
-        ui_in = 0;
+        ui_in  = 0;
+        uio_in = 0;
         #10;
 
         ui_in[5:2] = addr;
-        ui_in[1]   = 1;     // start_read
+        ui_in[1]   = 1;   // start_read
 
         #10 ui_in[1] = 0;
 
-        #80;
+        wait(dut.m0.done);   // ✅ wait for read complete
+        #10;
+
         $display("M0 READ: Addr=0x%h Data=0x%h", addr, uo_out);
     end
     endtask
 
-    // ---------------- TASK: MASTER1 WRITE ----------------
+    // ---------------- MASTER1 WRITE ----------------
     task m1_write(input [3:0] addr, input [7:0] data);
     begin
-        ui_in  = data;  // data for master1
+        ui_in  = data;
         uio_in = 0;
         #10;
 
@@ -72,14 +77,17 @@ module axi4lite_tb;
 
         #10 uio_in[0] = 0;
 
-        #80;
+        wait(dut.m1.done);   // ✅ wait for completion
+        #10;
+
         $display("M1 WRITE: Addr=0x%h Data=0x%h", addr, data);
     end
     endtask
 
-    // ---------------- TASK: MASTER1 READ ----------------
+    // ---------------- MASTER1 READ ----------------
     task m1_read(input [3:0] addr);
     begin
+        ui_in  = 0;
         uio_in = 0;
         #10;
 
@@ -88,7 +96,9 @@ module axi4lite_tb;
 
         #10 uio_in[1] = 0;
 
-        #80;
+        wait(dut.m1.done);   // ✅ wait for read complete
+        #10;
+
         $display("M1 READ: Addr=0x%h Data=0x%h", addr, uio_out);
     end
     endtask
@@ -99,7 +109,7 @@ module axi4lite_tb;
         ui_in  = 0;
         uio_in = 0;
 
-        #20 rst = 0;   // release reset
+        #20 rst = 0;
         #20;
 
         $display("===== MASTER0 → SLAVE0 =====");
@@ -118,7 +128,7 @@ module axi4lite_tb;
         m1_write(4'hB, 8'hDD);
         m1_read (4'hB);
 
-        #100;
+        #50;
         $finish;
     end
 
