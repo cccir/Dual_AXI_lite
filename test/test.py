@@ -50,7 +50,15 @@ async def axi_read(dut, master, addr):
         await RisingEdge(dut.clk)
 
     if master == 0:
-        return dut.uo_out.value.integer
+        
+        val = dut.uo_out.value
+        
+        if not val.is_resolvable:
+            
+            dut._log.error(f"X/Z detected on uo_out: {val}")
+            return 0
+            
+            return val.to_unsigned()
     else:
         return dut.uio_out.value.integer
 
