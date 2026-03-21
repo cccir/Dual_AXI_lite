@@ -12,17 +12,16 @@ module axi4lite_tb;
     wire [7:0] uo_out;
 
     // DUT
-tt_um_axi4lite_top dut (
-    .clk    (clk),
-    .rst_n  (~rst),   // active LOW reset
-    .ena    (1'b1),
-
-    .ui_in  (ui_in),
-    .uio_in (uio_in),
-    .uio_out(uio_out),
-    .uo_out (uo_out),
-    .uio_oe ()
-);
+    tt_um_axi4lite_top dut (
+        .clk    (clk),
+        .rst_n  (~rst),
+        .ena    (1'b1),
+        .ui_in  (ui_in),
+        .uio_in (uio_in),
+        .uio_out(uio_out),
+        .uo_out (uo_out),
+        .uio_oe ()
+    );
 
     // Clock
     initial begin
@@ -38,13 +37,11 @@ tt_um_axi4lite_top dut (
         #10;
 
         ui_in[5:2] = addr;
-        ui_in[0]   = 1;   // start_write
+        ui_in[0]   = 1;
 
         #10 ui_in[0] = 0;
 
-        wait(dut.m0.done);
-   // ✅ wait for completion
-        #10;
+        #100;  // ✅ wait for AXI completion
 
         $display("M0 WRITE: Addr=0x%h Data=0x%h", addr, data);
     end
@@ -58,13 +55,11 @@ tt_um_axi4lite_top dut (
         #10;
 
         ui_in[5:2] = addr;
-        ui_in[1]   = 1;   // start_read
+        ui_in[1]   = 1;
 
         #10 ui_in[1] = 0;
 
-        wait(dut.m0_bvalid);   // write complete
-        wait(dut.m0_rvalid);   // read complete   // ✅ wait for read complete
-        #10;
+        #100;  // ✅ wait for read data
 
         $display("M0 READ: Addr=0x%h Data=0x%h", addr, uo_out);
     end
@@ -82,9 +77,7 @@ tt_um_axi4lite_top dut (
 
         #10 uio_in[0] = 0;
 
-        wait(dut.m1_bvalid);   // write complete
-        wait(dut.m1_rvalid);   // read complete   // ✅ wait for completion
-        #10;
+        #100;
 
         $display("M1 WRITE: Addr=0x%h Data=0x%h", addr, data);
     end
@@ -102,9 +95,7 @@ tt_um_axi4lite_top dut (
 
         #10 uio_in[1] = 0;
 
-        wait(dut.m1_bvalid);   // write complete
-        wait(dut.m1_rvalid);   // read complete   // ✅ wait for read complete
-        #10;
+        #100;
 
         $display("M1 READ: Addr=0x%h Data=0x%h", addr, uio_out);
     end
@@ -135,7 +126,7 @@ tt_um_axi4lite_top dut (
         m1_write(4'hB, 8'hDD);
         m1_read (4'hB);
 
-        #50;
+        #100;
         $finish;
     end
 
