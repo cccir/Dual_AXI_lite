@@ -115,22 +115,50 @@ module tt_um_axi4lite_top (
     wire s0_arready, s1_arready;
 
     axi4lite_slave s0 (
-        .clk(clk), .rst(rst),
-        .awaddr(awaddr), .awvalid(awvalid & ~sel_w), .awready(s0_awready),
-        .wdata(wdata), .wvalid(wvalid & ~sel_w), .wready(s0_wready),
-        .bvalid(s0_bvalid), .bready(bready & ~sel_w),
-        .araddr(araddr), .arvalid(arvalid & ~sel_r), .arready(s0_arready),
-        .rdata(s0_rdata), .rvalid(s0_rvalid), .rready(rready & ~sel_r)
-    );
+    .clk(clk), .rst(rst),
+
+    .awaddr(awaddr),
+    .awvalid(awvalid & ~sel_w),
+    .awready(s0_awready),
+
+    .wdata(wdata),
+    .wvalid(wvalid),              // ✅ FIXED (NO gating)
+    .wready(s0_wready),
+
+    .bvalid(s0_bvalid),
+    .bready(bready),              // ✅ FIXED (NO gating)
+
+    .araddr(araddr),
+    .arvalid(arvalid & ~sel_r),
+    .arready(s0_arready),
+
+    .rdata(s0_rdata),
+    .rvalid(s0_rvalid),
+    .rready(rready & ~sel_r)
+);
 
     axi4lite_slave s1 (
-        .clk(clk), .rst(rst),
-        .awaddr(awaddr), .awvalid(awvalid & sel_w), .awready(s1_awready),
-        .wdata(wdata), .wvalid(wvalid & sel_w), .wready(s1_wready),
-        .bvalid(s1_bvalid), .bready(bready & sel_w),
-        .araddr(araddr), .arvalid(arvalid & sel_r), .arready(s1_arready),
-        .rdata(s1_rdata), .rvalid(s1_rvalid), .rready(rready & sel_r)
-    );
+    .clk(clk), .rst(rst),
+
+    .awaddr(awaddr),
+    .awvalid(awvalid & sel_w),
+    .awready(s1_awready),
+
+    .wdata(wdata),
+    .wvalid(wvalid),              // ✅ FIXED (NO gating)
+    .wready(s1_wready),
+
+    .bvalid(s1_bvalid),
+    .bready(bready),              // ✅ FIXED (NO gating)
+
+    .araddr(araddr),
+    .arvalid(arvalid & sel_r),
+    .arready(s1_arready),
+
+    .rdata(s1_rdata),
+    .rvalid(s1_rvalid),
+    .rready(rready & sel_r)
+);
 
     // ================= RETURN =================
     assign m0_awready = use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
