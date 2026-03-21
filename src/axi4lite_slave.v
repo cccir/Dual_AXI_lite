@@ -2,71 +2,61 @@ module axi4lite_slave (
     input clk,
     input rst,
 
-    // WRITE ADDRESS
     input [3:0] awaddr,
     input awvalid,
     output reg awready,
 
-    // WRITE DATA
     input [7:0] wdata,
     input wvalid,
     output reg wready,
 
-    // WRITE RESPONSE
     output reg bvalid,
     input bready,
 
-    // READ ADDRESS
     input [3:0] araddr,
     input arvalid,
     output reg arready,
 
-    // READ DATA
     output reg [7:0] rdata,
     output reg rvalid,
     input rready
 );
 
 reg [7:0] mem [0:15];
+integer i;
 
 always @(posedge clk) begin
     if (rst) begin
-        awready <= 0; wready <= 0; bvalid <= 0;
-        arready <= 0; rvalid <= 0;
+        for (i=0;i<16;i=i+1) mem[i]<=0;
+        awready<=0; wready<=0; bvalid<=0;
+        arready<=0; rvalid<=0;
     end else begin
-        // WRITE ADDRESS
-        if (awvalid && !awready) begin
+
+        // WRITE
+        if (awvalid && wvalid && !bvalid) begin
+            mem[awaddr] <= wdata;
             awready <= 1;
+            wready  <= 1;
+            bvalid  <= 1;
         end else begin
             awready <= 0;
+            wready  <= 0;
         end
 
-        // WRITE DATA
-        if (wvalid && !wready) begin
-            wready <= 1;
-            mem[awaddr] <= wdata;
-            bvalid <= 1;
-        end else begin
-            wready <= 0;
-        end
-
-        // WRITE RESPONSE
-        if (bvalid && bready) begin
+        if (bvalid && bready)
             bvalid <= 0;
-        end
 
         // READ
-        if (arvalid && !arready) begin
-            arready <= 1;
-            rdata <= mem[araddr];
+        if (arvalid && !rvalid) begin
+            rdata  <= mem[araddr];
+            arready<= 1;
             rvalid <= 1;
         end else begin
-            arready <= 0;
+            arready<= 0;
         end
 
-        if (rvalid && rready) begin
+        if (rvalid && rready)
             rvalid <= 0;
-        end
     end
 end
 
