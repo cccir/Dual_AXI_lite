@@ -18,12 +18,15 @@ pinout:
   # =========================
   ui[0]: "m0_start_write"
   ui[1]: "m0_start_read"
-  ui[5:2]: "m0_addr[3:0]"
+  ui[2]: "m0_addr[0]"
+  ui[3]: "m0_addr[1]"
+  ui[4]: "m0_addr[2]"
+  ui[5]: "m0_addr[3]"
   ui[6]: ""
   ui[7]: ""
 
   # =========================
-  # MASTER0 OUTPUT
+  # MASTER0 OUTPUT (read data)
   # =========================
   uo[0]: "m0_rdata[0]"
   uo[1]: "m0_rdata[1]"
@@ -39,8 +42,11 @@ pinout:
   # =========================
   uio[0]: "m1_start_write"
   uio[1]: "m1_start_read"
-  uio[5:2]: "m1_addr[3:0]"
-  uio[6]: "m1_data_in[6]"
-  uio[7]: "m1_data_in[7]"
+  uio[2]: "m1_addr[0]"
+  uio[3]: "m1_addr[1]"
+  uio[4]: "m1_addr[2]"
+  uio[5]: "m1_addr[3]"
+  uio[6]: "m1_data[6]"
+  uio[7]: "m1_data[7]"
 
 yaml_version: 6
