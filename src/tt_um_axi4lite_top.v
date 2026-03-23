@@ -48,6 +48,7 @@ module tt_um_axi4lite_top (
     wire m1_active = m1_awvalid | m1_wvalid | m1_arvalid;
 
     reg sel_r_reg;
+    reg sel_w_reg;
     reg read_master;  // 0 = M0, 1 = M1
 
     // ================= MASTER INST =================
@@ -141,7 +142,8 @@ module tt_um_axi4lite_top (
     .awready(s0_awready),
 
     .wdata(wdata),
-    .wvalid(wvalid),              // ✅ FIXED (NO gating)
+    .wvalid(wvalid & ~sel_w_reg)  // for s0
+    
     .wready(s0_wready),
 
     .bvalid(s0_bvalid),
@@ -164,7 +166,8 @@ module tt_um_axi4lite_top (
     .awready(s1_awready),
 
     .wdata(wdata),
-    .wvalid(wvalid),              // ✅ FIXED (NO gating)
+    
+    .wvalid(wvalid &  sel_w_reg)  // for s1              // ✅ FIXED (NO gating)
     .wready(s1_wready),
 
     .bvalid(s1_bvalid),
@@ -192,6 +195,15 @@ end
     else if (arvalid && (use_m0 ? m0_arready : m1_arready))
         sel_r_reg <= sel_r;
 end
+
+    reg sel_w_reg;
+
+always @(posedge clk) begin
+    if (rst)
+        sel_w_reg <= 0;
+    else if (awvalid && (use_m0 ? m0_awready : m1_awready))
+        sel_w_reg <= sel_w;
+end
     // ================= RETURN =================
     assign m0_awready = use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
     assign m1_awready = !use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
@@ -199,8 +211,8 @@ end
     assign m0_wready = use_m0 ? (sel_w ? s1_wready : s0_wready) : 0;
     assign m1_wready = !use_m0 ? (sel_w ? s1_wready : s0_wready) : 0;
 
-    assign m0_bvalid = use_m0 ? (sel_w ? s1_bvalid : s0_bvalid) : 0;
-    assign m1_bvalid = !use_m0 ? (sel_w ? s1_bvalid : s0_bvalid) : 0;
+    assign m0_bvalid = use_m0 ? (sel_w_reg ? s1_bvalid : s0_bvalid) : 0;
+    assign m1_bvalid = !use_m0 ? (sel_w_reg ? s1_bvalid : s0_bvalid) : 0;
 
     assign m0_arready = use_m0 ? (sel_r ? s1_arready : s0_arready) : 0;
     assign m1_arready = !use_m0 ? (sel_r ? s1_arready : s0_arready) : 0;
