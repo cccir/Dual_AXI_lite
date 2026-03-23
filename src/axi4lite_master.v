@@ -1,93 +1,98 @@
 module axi4lite_master (
-    input clk,
-    input rst,
+    input  wire       clk,
+    input  wire       rst,
 
-    input start_write,
-    input start_read,
-    input [3:0] addr,
-    input [7:0] wdata,
+    input  wire       start_write,
+    input  wire       start_read,
+    input  wire [3:0] addr,
+    input  wire [7:0] wdata,
 
-    output reg [7:0] rdata,
-    output reg done,
+    output reg  [7:0] rdata,
+    output reg        done,
 
     // AXI
     output reg [3:0] awaddr,
-    output reg awvalid,
-    input awready,
+    output reg       awvalid,
+    input  wire      awready,
 
     output reg [7:0] wdata_o,
-    output reg wvalid,
-    input wready,
+    output reg       wvalid,
+    input  wire      wready,
 
-    input bvalid,
-    output reg bready,
+    input  wire      bvalid,
+    output reg       bready,
 
     output reg [3:0] araddr,
-    output reg arvalid,
-    input arready,
+    output reg       arvalid,
+    input  wire      arready,
 
-    input [7:0] rdata_i,
-    input rvalid,
-    output reg rready
+    input  wire [7:0] rdata_i,
+    input  wire       rvalid,
+    output reg        rready
 );
 
-localparam IDLE=0, WA=1, WD=2, WR=3, RA=4, RD=5;
-reg [2:0] state;
+    typedef enum logic [2:0] {
+        IDLE, AW, W, B, AR, R
+    } state_t;
 
-always @(posedge clk) begin
-    if (rst) begin
-        state<=IDLE;
-        awvalid<=0; wvalid<=0; bready<=0;
-        arvalid<=0; rready<=0;
-        done<=0;
-    end else begin
-        done<=0;
+    state_t state;
 
-        case(state)
+    always @(posedge clk) begin
+        if (rst) begin
+            state   <= IDLE;
+            awvalid <= 0; wvalid <= 0; bready <= 0;
+            arvalid <= 0; rready <= 0;
+            done    <= 0;
+        end else begin
+            done <= 0;
 
-        IDLE: begin
-            if(start_write) state<=WA;
-            else if(start_read) state<=RA;
-        end
+            case (state)
 
-        WA: begin
-            awaddr<=addr; awvalid<=1;
-            if(awvalid && awready) begin
-                awvalid<=0; state<=WD;
+            IDLE: begin
+                if (start_write) begin
+                    awaddr  <= addr;
+                    wdata_o <= wdata;
+                    awvalid <= 1;
+                    state   <= AW;
+                end else if (start_read) begin
+                    araddr  <= addr;
+                    arvalid <= 1;
+                    state   <= AR;
+                end
             end
-        end
 
-        WD: begin
-            wdata_o<=wdata; wvalid<=1;
-            if(wvalid && wready) begin
-                wvalid<=0; state<=WR;
+            AW: if (awready) begin
+                awvalid <= 0;
+                wvalid  <= 1;
+                state   <= W;
             end
-        end
 
-        WR: begin
-            bready<=1;
-            if(bvalid) begin
-                bready<=0; done<=1; state<=IDLE;
+            W: if (wready) begin
+                wvalid <= 0;
+                bready <= 1;
+                state  <= B;
             end
-        end
 
-        RA: begin
-            araddr<=addr; arvalid<=1;
-            if(arvalid && arready) begin
-                arvalid<=0; state<=RD;
+            B: if (bvalid) begin
+                bready <= 0;
+                done   <= 1;
+                state  <= IDLE;
             end
-        end
 
-        RD: begin
-            rready<=1;
-            if(rvalid) begin
-                rdata<=rdata_i;
-                rready<=0; done<=1; state<=IDLE;
+            AR: if (arready) begin
+                arvalid <= 0;
+                rready  <= 1;
+                state   <= R;
             end
-        end
 
-        endcase
+            R: if (rvalid) begin
+                rdata  <= rdata_i;
+                rready <= 0;
+                done   <= 1;
+                state  <= IDLE;
+            end
+
+            endcase
+        end
     end
-end
-
 endmodule
