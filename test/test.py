@@ -2,7 +2,6 @@ import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 
-
 async def axi_write(dut, master, addr, data):
 
     dut.ui_in.value = 0
