@@ -147,7 +147,7 @@ module tt_um_axi4lite_top (
     .wready(s0_wready),
 
     .bvalid(s0_bvalid),
-    .bready(bready),              // ✅ FIXED (NO gating)
+        .bready(bready & ~sel_w_reg),              // ✅ FIXED (NO gating)
 
     .araddr(araddr),
     .arvalid(arvalid & ~sel_r),
@@ -171,7 +171,7 @@ module tt_um_axi4lite_top (
     .wready(s1_wready),
 
     .bvalid(s1_bvalid),
-    .bready(bready),              // ✅ FIXED (NO gating)
+   .bready(bready & sel_w_reg)              // ✅ FIXED (NO gating)
 
     .araddr(araddr),
     .arvalid(arvalid & sel_r),
@@ -208,8 +208,8 @@ end
    assign m0_wready = use_m0 ? (sel_w_reg ? s1_wready : s0_wready) : 0;
    assign m1_wready = !use_m0 ? (sel_w_reg ? s1_wready : s0_wready) : 0;
 
-    assign m0_wready = use_m0 ? (sel_w_reg ? s1_wready : s0_wready) : 0;
-assign m1_wready = !use_m0 ? (sel_w_reg ? s1_wready : s0_wready) : 0;
+   assign m0_awready = use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
+assign m1_awready = !use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
 
     assign m0_bvalid = use_m0 ? (sel_w_reg ? s1_bvalid : s0_bvalid) : 0;
     assign m1_bvalid = !use_m0 ? (sel_w_reg ? s1_bvalid : s0_bvalid) : 0;
