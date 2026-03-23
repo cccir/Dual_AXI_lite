@@ -142,7 +142,7 @@ module tt_um_axi4lite_top (
     .awready(s0_awready),
 
     .wdata(wdata),
-    .wvalid(wvalid & ~sel_w_reg)  // for s0
+    .wvalid(wvalid & ~sel_w_reg),  // for s0
     
     .wready(s0_wready),
 
@@ -167,7 +167,7 @@ module tt_um_axi4lite_top (
 
     .wdata(wdata),
     
-    .wvalid(wvalid &  sel_w_reg)  // for s1              // ✅ FIXED (NO gating)
+    .wvalid(wvalid &  sel_w_reg),  // for s1              // ✅ FIXED (NO gating)
     .wready(s1_wready),
 
     .bvalid(s1_bvalid),
@@ -196,7 +196,7 @@ end
         sel_r_reg <= sel_r;
 end
 
-    reg sel_w_reg;
+
 
 always @(posedge clk) begin
     if (rst)
@@ -205,11 +205,11 @@ always @(posedge clk) begin
         sel_w_reg <= sel_w;
 end
     // ================= RETURN =================
-    assign m0_awready = use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
-    assign m1_awready = !use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
+   assign m0_wready = use_m0 ? (sel_w_reg ? s1_wready : s0_wready) : 0;
+   assign m1_wready = !use_m0 ? (sel_w_reg ? s1_wready : s0_wready) : 0;
 
-    assign m0_wready = use_m0 ? (sel_w ? s1_wready : s0_wready) : 0;
-    assign m1_wready = !use_m0 ? (sel_w ? s1_wready : s0_wready) : 0;
+    assign m0_wready = use_m0 ? (sel_w_reg ? s1_wready : s0_wready) : 0;
+assign m1_wready = !use_m0 ? (sel_w_reg ? s1_wready : s0_wready) : 0;
 
     assign m0_bvalid = use_m0 ? (sel_w_reg ? s1_bvalid : s0_bvalid) : 0;
     assign m1_bvalid = !use_m0 ? (sel_w_reg ? s1_bvalid : s0_bvalid) : 0;
