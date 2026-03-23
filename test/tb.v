@@ -32,16 +32,20 @@ module axi4lite_tb;
     // ---------------- MASTER0 WRITE ----------------
     task m0_write(input [3:0] addr, input [7:0] data);
     begin
+        @(posedge clk);
         ui_in  = 0;
         uio_in = data;
-        #10;
 
+        @(posedge clk);
         ui_in[5:2] = addr;
         ui_in[0]   = 1;
 
-        #10 ui_in[0] = 0;
+        @(posedge clk);
+        ui_in[0] = 0;
 
-        #100;  // ✅ wait for AXI completion
+        // ✅ WAIT FOR DONE
+        wait(dut.m0_done == 1);
+        @(posedge clk);
 
         $display("M0 WRITE: Addr=0x%h Data=0x%h", addr, data);
     end
@@ -50,16 +54,20 @@ module axi4lite_tb;
     // ---------------- MASTER0 READ ----------------
     task m0_read(input [3:0] addr);
     begin
+        @(posedge clk);
         ui_in  = 0;
         uio_in = 0;
-        #10;
 
+        @(posedge clk);
         ui_in[5:2] = addr;
         ui_in[1]   = 1;
 
-        #10 ui_in[1] = 0;
+        @(posedge clk);
+        ui_in[1] = 0;
 
-        #100;  // ✅ wait for read data
+        // ✅ WAIT FOR DONE
+        wait(dut.m0_done == 1);
+        @(posedge clk);
 
         $display("M0 READ: Addr=0x%h Data=0x%h", addr, uo_out);
     end
@@ -68,16 +76,20 @@ module axi4lite_tb;
     // ---------------- MASTER1 WRITE ----------------
     task m1_write(input [3:0] addr, input [7:0] data);
     begin
+        @(posedge clk);
         ui_in  = data;
         uio_in = 0;
-        #10;
 
+        @(posedge clk);
         uio_in[5:2] = addr;
         uio_in[0]   = 1;
 
-        #10 uio_in[0] = 0;
+        @(posedge clk);
+        uio_in[0] = 0;
 
-        #100;
+        // ✅ WAIT FOR DONE
+        wait(dut.m1_done == 1);
+        @(posedge clk);
 
         $display("M1 WRITE: Addr=0x%h Data=0x%h", addr, data);
     end
@@ -86,16 +98,20 @@ module axi4lite_tb;
     // ---------------- MASTER1 READ ----------------
     task m1_read(input [3:0] addr);
     begin
+        @(posedge clk);
         ui_in  = 0;
         uio_in = 0;
-        #10;
 
+        @(posedge clk);
         uio_in[5:2] = addr;
         uio_in[1]   = 1;
 
-        #10 uio_in[1] = 0;
+        @(posedge clk);
+        uio_in[1] = 0;
 
-        #100;
+        // ✅ WAIT FOR DONE
+        wait(dut.m1_done == 1);
+        @(posedge clk);
 
         $display("M1 READ: Addr=0x%h Data=0x%h", addr, uio_out);
     end
@@ -107,8 +123,9 @@ module axi4lite_tb;
         ui_in  = 0;
         uio_in = 0;
 
-        #20 rst = 0;
-        #20;
+        repeat(5) @(posedge clk);
+        rst = 0;
+        repeat(2) @(posedge clk);
 
         $display("===== MASTER0 → SLAVE0 =====");
         m0_write(4'h2, 8'hAA);
@@ -126,7 +143,7 @@ module axi4lite_tb;
         m1_write(4'hB, 8'hDD);
         m1_read (4'hB);
 
-        #100;
+        #50;
         $finish;
     end
 
