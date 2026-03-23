@@ -1,7 +1,6 @@
 module tt_um_axi4lite_top (
     input  wire       clk,
     input  wire       rst_n,
-    input  wire       ena,
 
     input  wire [7:0] ui_in,
     output wire [7:0] uo_out,
@@ -17,7 +16,7 @@ module tt_um_axi4lite_top (
     // ================= MASTER WIRES =================
     wire [3:0] m0_awaddr, m1_awaddr;
     wire [3:0] m0_araddr, m1_araddr;
-    wire [7:0] m0_wdata,  m1_wdata;
+    wire [7:0] m0_wdata, m1_wdata;
 
     wire m0_awvalid, m1_awvalid;
     wire m0_wvalid,  m1_wvalid;
@@ -33,12 +32,6 @@ module tt_um_axi4lite_top (
 
     wire [7:0] m0_rdata, m1_rdata;
 
-    wire m0_active = m0_awvalid | m0_wvalid | m0_arvalid;
-    wire m1_active = m1_awvalid | m1_wvalid | m1_arvalid;
-
-    reg sel_r_reg, sel_w_reg;
-    reg read_master;
-
     // ================= MASTER INST =================
     axi4lite_master m0 (
         .clk(clk), .rst(rst),
@@ -47,7 +40,7 @@ module tt_um_axi4lite_top (
         .addr(ui_in[5:2]),
         .wdata(uio_in),
 
-        .rdata(), .done(),
+        .rdata(m0_rdata), .done(),
 
         .awaddr(m0_awaddr), .awvalid(m0_awvalid), .awready(m0_awready),
         .wdata_o(m0_wdata), .wvalid(m0_wvalid), .wready(m0_wready),
@@ -63,7 +56,7 @@ module tt_um_axi4lite_top (
         .addr(uio_in[5:2]),
         .wdata(ui_in),
 
-        .rdata(), .done(),
+        .rdata(m1_rdata), .done(),
 
         .awaddr(m1_awaddr), .awvalid(m1_awvalid), .awready(m1_awready),
         .wdata_o(m1_wdata), .wvalid(m1_wvalid), .wready(m1_wready),
@@ -72,33 +65,19 @@ module tt_um_axi4lite_top (
         .rdata_i(m1_rdata), .rvalid(m1_rvalid), .rready(m1_rready)
     );
 
-    // ================= ARBITER =================
-    reg active_master, busy;
+    // ================= SIMPLE ARBITER =================
+    reg active_master;
 
     always @(posedge clk) begin
-        if (rst) begin
+        if (rst)
             active_master <= 0;
-            busy <= 0;
-        end else begin
-            if (!busy) begin
-                if (m0_active) begin
-                    active_master <= 0;
-                    busy <= 1;
-                end else if (m1_active) begin
-                    active_master <= 1;
-                    busy <= 1;
-                end
-            end
-
-            if (busy) begin
-                if ((active_master==0 && ((m0_rvalid && m0_rready) || (m0_bvalid && m0_bready))) ||
-                    (active_master==1 && ((m1_rvalid && m1_rready) || (m1_bvalid && m1_bready))))
-                    busy <= 0;
-            end
-        end
+        else if (m1_awvalid | m1_arvalid)
+            active_master <= 1;
+        else if (m0_awvalid | m0_arvalid)
+            active_master <= 0;
     end
 
-    wire use_m0 = (active_master==0);
+    wire use_m0 = (active_master == 0);
 
     // ================= MUX =================
     wire [3:0] awaddr = use_m0 ? m0_awaddr : m1_awaddr;
@@ -111,8 +90,33 @@ module tt_um_axi4lite_top (
     wire arvalid = use_m0 ? m0_arvalid : m1_arvalid;
     wire rready  = use_m0 ? m0_rready  : m1_rready;
 
+    // ================= SLAVE SELECT =================
     wire sel_w = awaddr[3];
     wire sel_r = araddr[3];
+
+    // ================= REGISTER SELECT =================
+    reg sel_w_reg, sel_r_reg, read_master;
+
+    always @(posedge clk) begin
+        if (rst)
+            sel_w_reg <= 0;
+        else if (awvalid)
+            sel_w_reg <= sel_w;
+    end
+
+    always @(posedge clk) begin
+        if (rst)
+            sel_r_reg <= 0;
+        else if (arvalid)
+            sel_r_reg <= sel_r;
+    end
+
+    always @(posedge clk) begin
+        if (rst)
+            read_master <= 0;
+        else if (arvalid)
+            read_master <= active_master;
+    end
 
     // ================= SLAVES =================
     wire [7:0] s0_rdata, s1_rdata;
@@ -122,20 +126,6 @@ module tt_um_axi4lite_top (
     wire s0_bvalid,  s1_bvalid;
     wire s0_arready, s1_arready;
 
-    // ================= AW DONE =================
-    reg aw_done;
-
-    always @(posedge clk) begin
-        if (rst)
-            aw_done <= 0;
-        else if (awvalid && (use_m0 ? m0_awready : m1_awready))
-            aw_done <= 1;
-        else if ((wvalid && (use_m0 ? m0_wready : m1_wready)) &&
-                 !(awvalid && (use_m0 ? m0_awready : m1_awready)))
-            aw_done <= 0;
-    end
-
-    // ================= SLAVE INST =================
     axi4lite_slave s0 (
         .clk(clk), .rst(rst),
         .awaddr(awaddr),
@@ -143,7 +133,7 @@ module tt_um_axi4lite_top (
         .awready(s0_awready),
 
         .wdata(wdata),
-        .wvalid(wvalid & aw_done & ~sel_w_reg),
+        .wvalid(wvalid & ~sel_w_reg),
         .wready(s0_wready),
 
         .bvalid(s0_bvalid),
@@ -165,7 +155,7 @@ module tt_um_axi4lite_top (
         .awready(s1_awready),
 
         .wdata(wdata),
-        .wvalid(wvalid & aw_done & sel_w_reg),
+        .wvalid(wvalid & sel_w_reg),
         .wready(s1_wready),
 
         .bvalid(s1_bvalid),
@@ -179,28 +169,6 @@ module tt_um_axi4lite_top (
         .rvalid(s1_rvalid),
         .rready(rready & sel_r)
     );
-
-    // ================= LATCHES =================
-    always @(posedge clk) begin
-        if (rst)
-            sel_w_reg <= 0;
-        else if (awvalid && (use_m0 ? m0_awready : m1_awready))
-            sel_w_reg <= sel_w;
-    end
-
-    always @(posedge clk) begin
-        if (rst)
-            sel_r_reg <= 0;
-        else if (arvalid && (use_m0 ? m0_arready : m1_arready))
-            sel_r_reg <= sel_r;
-    end
-
-    always @(posedge clk) begin
-        if (rst)
-            read_master <= 0;
-        else if (arvalid && (use_m0 ? m0_arready : m1_arready))
-            read_master <= active_master;
-    end
 
     // ================= RETURN =================
     assign m0_awready = use_m0 ? (sel_w ? s1_awready : s0_awready) : 0;
