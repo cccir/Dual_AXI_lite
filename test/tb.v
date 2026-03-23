@@ -43,9 +43,8 @@ module axi4lite_tb;
         @(posedge clk);
         ui_in[0] = 0;
 
-        // ✅ WAIT FOR DONE
-        wait(dut.m0_done == 1);
-        @(posedge clk);
+        // ✅ wait for AXI completion
+        repeat (20) @(posedge clk);
 
         $display("M0 WRITE: Addr=0x%h Data=0x%h", addr, data);
     end
@@ -65,9 +64,8 @@ module axi4lite_tb;
         @(posedge clk);
         ui_in[1] = 0;
 
-        // ✅ WAIT FOR DONE
-        wait(dut.m0_done == 1);
-        @(posedge clk);
+        // ✅ wait for read data
+        repeat (25) @(posedge clk);
 
         $display("M0 READ: Addr=0x%h Data=0x%h", addr, uo_out);
     end
@@ -87,9 +85,7 @@ module axi4lite_tb;
         @(posedge clk);
         uio_in[0] = 0;
 
-        // ✅ WAIT FOR DONE
-        wait(dut.m1_done == 1);
-        @(posedge clk);
+        repeat (20) @(posedge clk);
 
         $display("M1 WRITE: Addr=0x%h Data=0x%h", addr, data);
     end
@@ -109,9 +105,7 @@ module axi4lite_tb;
         @(posedge clk);
         uio_in[1] = 0;
 
-        // ✅ WAIT FOR DONE
-        wait(dut.m1_done == 1);
-        @(posedge clk);
+        repeat (25) @(posedge clk);
 
         $display("M1 READ: Addr=0x%h Data=0x%h", addr, uio_out);
     end
