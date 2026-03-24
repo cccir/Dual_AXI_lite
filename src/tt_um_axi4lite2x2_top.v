@@ -1,4 +1,4 @@
-module tt_um_axi4lite_top (
+module tt_um_axi4lite2x2_top (
     input  wire       clk,
     input  wire       rst_n,
     input  wire       ena,
